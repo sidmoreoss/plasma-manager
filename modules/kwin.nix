@@ -623,7 +623,7 @@ in
                 description = "Whether to limit tile width for krohnkite.";
               };
               ratio = lib.mkOption {
-                type = with lib.types; nullOr (floats.between 1 100);
+                type = with lib.types; nullOr (ints.between 1 100);
                 default = null;
                 example = 1.6;
                 description = "Tile width limiting ratio for krohnkite.";
@@ -703,6 +703,12 @@ in
               default = null;
               example = true;
               description = "Whether to enable stacked layout for krohnkite.";
+            };
+            spread.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable spread layout for krohnkite.";
             };
             stair = {
               enable = lib.mkOption {
