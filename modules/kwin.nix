@@ -4,7 +4,6 @@
   pkgs,
   ...
 }:
-
 let
   cfg = config.programs.plasma;
   validTitlebarButtons = {
@@ -56,10 +55,13 @@ let
     names:
     builtins.listToAttrs (lib.imap1 (i: v: (lib.nameValuePair "Name_${builtins.toString i}" v)) names);
 
-
   virtualDesktopIdAttrs =
     number:
-    builtins.listToAttrs (map (i: (lib.nameValuePair "Id_${builtins.toString i}" "Desktop_${builtins.toString i}")) (lib.range 1 number));
+    builtins.listToAttrs (
+      map (i: (lib.nameValuePair "Id_${builtins.toString i}" "Desktop_${builtins.toString i}")) (
+        lib.range 1 number
+      )
+    );
 
   capitalizeWord =
     word:
@@ -569,6 +571,169 @@ in
           };
         };
       };
+
+      krohnkite = {
+        enable = lib.mkOption {
+          type = with lib.types; nullOr bool;
+          default = null;
+          example = true;
+          description = "Whether to enable Krohnkite.";
+        };
+
+        settings = {
+          geometry = {
+            gaps = {
+              top = lib.mkOption {
+                type = with lib.types; nullOr (ints.between 0 999);
+                default = null;
+                example = 8;
+                description = "Top screen gap for krohnkite.";
+              };
+              left = lib.mkOption {
+                type = with lib.types; nullOr (ints.between 0 999);
+                default = null;
+                example = 8;
+                description = "Left screen gap for krohnkite.";
+              };
+              right = lib.mkOption {
+                type = with lib.types; nullOr (ints.between 0 999);
+                default = null;
+                example = 8;
+                description = "Right screen gap for krohnkite.";
+              };
+              bottom = lib.mkOption {
+                type = with lib.types; nullOr (ints.between 0 999);
+                default = null;
+                example = 8;
+                description = "Bottom screen gap for krohnkite.";
+              };
+              tiles = lib.mkOption {
+                type = with lib.types; nullOr (ints.between 0 999);
+                default = null;
+                example = 8;
+                description = "Gap between tiles for krohnkite.";
+              };
+            };
+
+            tileWidthLimit = {
+              enable = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to limit tile width for krohnkite.";
+              };
+              ratio = lib.mkOption {
+                type = with lib.types; nullOr (floats.between 1 100);
+                default = null;
+                example = 1.6;
+                description = "Tile width limiting ratio for krohnkite.";
+              };
+            };
+          };
+
+          layouts = {
+            btree.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable binary tree layout for krohnkite.";
+            };
+            columns = {
+              enable = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to enable columns layout for krohnkite.";
+              };
+              balanced = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to enable balanced mode for columns layout.";
+              };
+            };
+            floating.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable floating layout for krohnkite.";
+            };
+            monocle = {
+              enable = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to enable monocle layout for krohnkite.";
+              };
+              maximize = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Fully maximize windows (no borders, no gaps) for monocle layout.";
+              };
+            };
+            quarter.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable quarter layout for krohnkite.";
+            };
+            spiral.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable spiral layout for krohnkite.";
+            };
+            threeColumn.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable three column layout for krohnkite.";
+            };
+            tile = {
+              enable = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to enable tile layout for krohnkite.";
+              };
+            };
+            stacked.enable = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable stacked layout for krohnkite.";
+            };
+            stair = {
+              enable = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to enable stacked layout for krohnkite.";
+              };
+              reverseDirection = lib.mkOption {
+                type = with lib.types; nullOr bool;
+                default = null;
+                example = true;
+                description = "Whether to reverse stair layout direction.";
+              };
+            };
+
+            enableLayoutPerActivity = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable layout per activity for krohnkite.";
+            };
+            enableLayoutPerDesktop = lib.mkOption {
+              type = with lib.types; nullOr bool;
+              default = null;
+              example = true;
+              description = "Whether to enable layout per desktop for krohnkite.";
+            };
+          };
+        };
+      };
     };
   };
 
@@ -638,7 +803,9 @@ in
 
       home.packages =
         with pkgs;
-        [ ] ++ lib.optionals (cfg.kwin.scripts.polonium.enable == true) [ polonium ];
+        [ ]
+        ++ lib.optionals (cfg.kwin.scripts.polonium.enable == true) [ polonium ]
+        ++ lib.optionals (cfg.kwin.scripts.krohnkite.enable == true) [ kdePackages.krohnkite ];
 
       programs.plasma.configFile."kwinrc" = (
         lib.mkMerge [
@@ -771,6 +938,34 @@ in
               SaveOnTileEdit = cfg.kwin.scripts.polonium.settings.saveOnTileEdit;
               TilePopups = cfg.kwin.scripts.polonium.settings.tilePopups;
               TimerDelay = cfg.kwin.scripts.polonium.settings.callbackDelay;
+            };
+          })
+
+          (lib.mkIf (cfg.kwin.scripts.krohnkite.enable != null) {
+            Plugins.krohnkiteEnable = cfg.kwin.scripts.krohnkite.enable;
+            Script-krohnkite = {
+              screenGapTop = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.top;
+              screenGapLeft = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.left;
+              screenGapRight = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.right;
+              screenGapBottom = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.bottom;
+              tileLayoutGap = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.tiles;
+              limitTileWidth = cfg.kwin.scripts.krohnkite.settings.geometry.tileWidthLimit.enable;
+              limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.geometry.tileWidthLimit.ratio;
+              enableBTreeLayout = cfg.kwin.scripts.krohnkite.settings.layouts.btree.enable;
+              enableColumnsLayout = cfg.kwin.scripts.krohnkite.settings.layouts.columns.enable;
+              columnsBalanced = cfg.kwin.scripts.krohnkite.settings.layouts.columns.balanced;
+              enableFloatingLayout = cfg.kwin.scripts.krohnkite.settings.layouts.floating.enable;
+              enableMonocleLayout = cfg.kwin.scripts.krohnkite.settings.layouts.monocle.enable;
+              monocleMaximize = cfg.kwin.scripts.krohnkite.settings.layouts.monocle.maximize;
+              enableQuarterLayout = cfg.kwin.scripts.krohnkite.settings.layouts.quarter.enable;
+              enableSpiralLayout = cfg.kwin.scripts.krohnkite.settings.layouts.spiral.enable;
+              enableSpreadLayout = cfg.kwin.scripts.krohnkite.settings.layouts.spread.enable;
+              enableStackedLayout = cfg.kwin.scripts.krohnkite.settings.layouts.stacked.enable;
+              enableStairLayout = cfg.kwin.scripts.krohnkite.settings.layouts.stair.enable;
+              enableThreeColumnLayout = cfg.kwin.scripts.krohnkite.settings.layouts.threeColumn.enable;
+              enableTileLayout = cfg.kwin.scripts.krohnkite.settings.layouts.tile.enable;
+              layoutPerActivity = cfg.kwin.scripts.krohnkite.settings.layouts.enableLayoutPerActivity;
+              layoutPerDesktop = cfg.kwin.scripts.krohnkite.settings.layouts.enableLayoutPerDesktop;
             };
           })
 
