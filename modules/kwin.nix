@@ -948,7 +948,7 @@ in
           })
 
           (lib.mkIf (cfg.kwin.scripts.krohnkite.enable != null) {
-            Plugins.krohnkiteEnable = cfg.kwin.scripts.krohnkite.enable;
+            Plugins.krohnkiteEnabled = cfg.kwin.scripts.krohnkite.enable;
             Script-krohnkite = {
               screenGapTop = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.top;
               screenGapLeft = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.left;
