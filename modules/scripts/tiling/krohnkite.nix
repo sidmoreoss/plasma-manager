@@ -73,8 +73,13 @@ let
       description = description;
     };
 
-  getLayoutSetting =
-    layout: key:
+  findLayoutSetting =
+    name: key:
+    let
+      layout = lib.findFirst (
+        layout: layout.name == name
+      ) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
+    in
     lib.getAttrFromPath [
       "options"
       key
@@ -83,6 +88,23 @@ let
 
   isLayoutEnabled =
     name: lib.any (layout: layout.name == name) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
+
+  serializeLayouts =
+    layouts:
+    let
+      toLayoutEntry =
+        layout:
+        {
+          "enable${lib.capitalize layout}" = isLayoutEnabled layout;
+        }
+        // (
+          if isLayoutEnabled layout then
+            lib.getAttrFromPath [ "options" ] (lib.findFirst (l: l.name == layout) layouts) // { }
+          else
+            { }
+        );
+    in
+    lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts);
 in
 {
   options.programs.plasma.kwin.scripts.krohnkite = with lib.types; {
@@ -145,10 +167,9 @@ in
       Script-krohnkite =
         let
           gaps = cfg.kwin.scripts.krohnkite.settings.gaps;
-          layouts = cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
-          findLayout = name: lib.findFirst (layout: layout.name == name) layouts;
         in
-        {
+        serializeLayouts cfg.kwin.scripts.krohnkite.settings.layouts.enabled
+        // {
           screenGapTop = gaps.top;
           screenGapLeft = gaps.left;
           screenGapRight = gaps.right;
@@ -157,22 +178,6 @@ in
 
           limitTileWidth = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.enable;
           limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.ratio;
-
-          enableBTreeLayout = isLayoutEnabled "btree";
-          enableColumnsLayout = isLayoutEnabled "column";
-          columnsBalanced = getLayoutSetting (findLayout "column") "balanced";
-
-          enableFloatingLayout = isLayoutEnabled "floating";
-          enableMonocleLayout = isLayoutEnabled "monocle";
-          monocleMaximize = getLayoutSetting (findLayout "monocle") "maximize";
-
-          enableQuarterLayout = isLayoutEnabled "quarter";
-          enableSpiralLayout = isLayoutEnabled "spiral";
-          enableSpreadLayout = isLayoutEnabled "spread";
-          enableStackedLayout = isLayoutEnabled "stacked";
-          enableStairLayout = isLayoutEnabled "stair";
-          enableThreeColumnLayout = isLayoutEnabled "threeColumn";
-          enableTileLayout = isLayoutEnabled "tile";
 
           layoutPerActivity = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerActivity;
           layoutPerDesktop = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerDesktop;
