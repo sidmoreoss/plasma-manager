@@ -29,23 +29,56 @@ let
   };
 
   krohnkiteSupportedLayouts = [
-    "btree"
-    "monocle"
-    "column"
-    "floating"
-    "quarter"
-    "spiral"
-    "threeColumn"
-    "tile"
-    "stacked"
-    "spread"
-    "stair"
+    {
+      value = "btree";
+      label = "BTreeLayout";
+    }
+    {
+      value = "monocle";
+      label = "MonocleLayout";
+    }
+    {
+      value = "column";
+      label = "ColumnsLayout";
+    }
+    {
+      value = "floating";
+      label = "FloatingLayout";
+    }
+    {
+      value = "quarter";
+      label = "QuarterLayout";
+    }
+    {
+      value = "spiral";
+      label = "SpiralLayout";
+    }
+    {
+      value = "threeColumn";
+      label = "ThreeColumnLayout";
+    }
+    {
+      value = "tile";
+      label = "TileLayout";
+    }
+    {
+      value = "stacked";
+      label = "StackedLayout";
+    }
+    {
+      value = "spread";
+      label = "SpreadLayout";
+    }
+    {
+      value = "stair";
+      label = "StairLayout";
+    }
   ];
 
   krohnkiteLayouts = lib.types.submodule {
     options = {
       name = lib.mkOption {
-        type = with lib.types; enum krohnkiteSupportedLayouts;
+        type = with lib.types; enum (lib.lists.forEach krohnkiteSupportedLayouts (x: x.value));
         description = "The name of the layout.";
       };
 
@@ -95,11 +128,11 @@ let
       toLayoutEntry =
         layout:
         {
-          "enable${lib.capitalize layout}" = isLayoutEnabled layout;
+          "enable${layout.label}" = isLayoutEnabled layout.value;
         }
         // (
-          if isLayoutEnabled layout then
-            lib.getAttrFromPath [ "options" ] (lib.findFirst (l: l.name == layout) layouts) // { }
+          if isLayoutEnabled layout.value then
+            lib.getAttrFromPath [ "options" ] (lib.findFirst (l: l.name == layout.value) layouts) // { }
           else
             { }
         );
@@ -178,9 +211,6 @@ in
 
           limitTileWidth = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.enable;
           limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.ratio;
-
-          layoutPerActivity = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerActivity;
-          layoutPerDesktop = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerDesktop;
         };
     };
   };
