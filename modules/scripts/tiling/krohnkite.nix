@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.programs.plasma;
+
   krohnkiteGaps = lib.types.submodule {
     options =
       let
@@ -15,7 +16,7 @@ let
             type = with lib.types; nullOr (ints.between 0 999);
             default = null;
             example = 8;
-            description = "${name} gap for krohnkite.";
+            description = "${name} gap for Krohnkite.";
           };
       in
       {
@@ -26,6 +27,7 @@ let
         tiles = mkGapOption "Gap between tiles";
       };
   };
+
   krohnkiteSupportedLayouts = [
     "btree"
     "monocle"
@@ -39,9 +41,26 @@ let
     "spread"
     "stair"
   ];
+
   krohnkiteLayouts = lib.types.submodule {
     options = {
-      name = lib.mkOption { type = with lib.types; nullOr (enum krohnkiteSupportedLayouts); };
+      name = lib.mkOption {
+        type = with lib.types; enum krohnkiteSupportedLayouts;
+        description = "The name of the layout.";
+      };
+
+      options = lib.mkOption {
+        type = with lib.types; attrsOf (with lib.types; anything);
+        default = { };
+        example = {
+          maximize = true;
+        };
+        description = ''
+          Layout-specific options. For example:
+          - `monocle` can have `{ maximize = true; }`
+          - `column` can have `{ balanced = true; }`
+        '';
+      };
     };
   };
 
@@ -50,9 +69,20 @@ let
     lib.mkOption {
       type = with lib.types; nullOr type;
       default = null;
-      example = if type == lib.types.bool then true else null; # Example defaults for bool or other types
+      example = example;
       description = description;
     };
+
+  getLayoutSetting =
+    layout: key:
+    lib.getAttrFromPath [
+      "options"
+      key
+    ] layout
+    // null;
+
+  isLayoutEnabled =
+    name: lib.any (layout: layout.name == name) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
 in
 {
   options.programs.plasma.kwin.scripts.krohnkite = with lib.types; {
@@ -72,11 +102,12 @@ in
 
       tileWidthLimit = {
         enable = mkNullableOption bool "Whether to limit tile width for Krohnkite." true;
+
         ratio = lib.mkOption {
-          type = with lib.types; nullOr (ints.between 1 100);
+          type = with lib.types; nullOr (numbers.between 0 99);
           default = null;
-          example = 1.6; # Example must match a valid float-like value
-          description = "Tile width limiting ratio for Krohnkite.";
+          example = 1.6;
+          description = "Tile width limiting ratio for Krohnkite. Must be a float between 0 and 99.";
         };
       };
 
@@ -91,45 +122,61 @@ in
                 maximize = true;
               };
             }
+            {
+              name = "column";
+              options = {
+                balanced = true;
+              };
+            }
           ];
           description = "List of layout configurations for Krohnkite.";
         };
       };
     };
   };
-  config = (
-    lib.mkIf cfg.enable {
-      home.packages =
-        with pkgs;
-        [ ] ++ lib.optionals (cfg.kwin.scripts.krohnkite.enable == true) [ kdePackages.krohnkite ];
 
-      programs.plasma.configFile."kwinrc" = lib.mkIf (cfg.kwin.scripts.krohnkite.enable != null) {
-        Plugins.krohnkiteEnabled = cfg.kwin.scripts.krohnkite.enable;
-        Script-krohnkite = {
-          screenGapTop = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.top;
-          screenGapLeft = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.left;
-          screenGapRight = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.right;
-          screenGapBottom = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.bottom;
-          tileLayoutGap = cfg.kwin.scripts.krohnkite.settings.geometry.gaps.tiles;
-          limitTileWidth = cfg.kwin.scripts.krohnkite.settings.geometry.tileWidthLimit.enable;
-          limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.geometry.tileWidthLimit.ratio;
-          enableBTreeLayout = cfg.kwin.scripts.krohnkite.settings.layouts.btree.enable;
-          enableColumnsLayout = cfg.kwin.scripts.krohnkite.settings.layouts.columns.enable;
-          columnsBalanced = cfg.kwin.scripts.krohnkite.settings.layouts.columns.balanced;
-          enableFloatingLayout = cfg.kwin.scripts.krohnkite.settings.layouts.floating.enable;
-          enableMonocleLayout = cfg.kwin.scripts.krohnkite.settings.layouts.monocle.enable;
-          monocleMaximize = cfg.kwin.scripts.krohnkite.settings.layouts.monocle.maximize;
-          enableQuarterLayout = cfg.kwin.scripts.krohnkite.settings.layouts.quarter.enable;
-          enableSpiralLayout = cfg.kwin.scripts.krohnkite.settings.layouts.spiral.enable;
-          enableSpreadLayout = cfg.kwin.scripts.krohnkite.settings.layouts.spread.enable;
-          enableStackedLayout = cfg.kwin.scripts.krohnkite.settings.layouts.stacked.enable;
-          enableStairLayout = cfg.kwin.scripts.krohnkite.settings.layouts.stair.enable;
-          enableThreeColumnLayout = cfg.kwin.scripts.krohnkite.settings.layouts.threeColumn.enable;
-          enableTileLayout = cfg.kwin.scripts.krohnkite.settings.layouts.tile.enable;
-          layoutPerActivity = cfg.kwin.scripts.krohnkite.settings.layouts.enableLayoutPerActivity;
-          layoutPerDesktop = cfg.kwin.scripts.krohnkite.settings.layouts.enableLayoutPerDesktop;
+  config = lib.mkIf cfg.enable {
+    home.packages =
+      with pkgs;
+      lib.optionals (cfg.kwin.scripts.krohnkite.enable != null) [ kdePackages.krohnkite ];
+
+    programs.plasma.configFile."kwinrc" = lib.mkIf (cfg.kwin.scripts.krohnkite.enable != null) {
+      Plugins.krohnkiteEnabled = cfg.kwin.scripts.krohnkite.enable;
+      Script-krohnkite =
+        let
+          gaps = cfg.kwin.scripts.krohnkite.settings.gaps;
+          layouts = cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
+          findLayout = name: lib.findFirst (layout: layout.name == name) layouts;
+        in
+        {
+          screenGapTop = gaps.top;
+          screenGapLeft = gaps.left;
+          screenGapRight = gaps.right;
+          screenGapBottom = gaps.bottom;
+          tileLayoutGap = gaps.tiles;
+
+          limitTileWidth = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.enable;
+          limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.ratio;
+
+          enableBTreeLayout = isLayoutEnabled "btree";
+          enableColumnsLayout = isLayoutEnabled "column";
+          columnsBalanced = getLayoutSetting (findLayout "column") "balanced";
+
+          enableFloatingLayout = isLayoutEnabled "floating";
+          enableMonocleLayout = isLayoutEnabled "monocle";
+          monocleMaximize = getLayoutSetting (findLayout "monocle") "maximize";
+
+          enableQuarterLayout = isLayoutEnabled "quarter";
+          enableSpiralLayout = isLayoutEnabled "spiral";
+          enableSpreadLayout = isLayoutEnabled "spread";
+          enableStackedLayout = isLayoutEnabled "stacked";
+          enableStairLayout = isLayoutEnabled "stair";
+          enableThreeColumnLayout = isLayoutEnabled "threeColumn";
+          enableTileLayout = isLayoutEnabled "tile";
+
+          layoutPerActivity = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerActivity;
+          layoutPerDesktop = cfg.kwin.scripts.krohnkite.settings.layouts.layoutPerDesktop;
         };
-      };
-    }
-  );
+    };
+  };
 }
