@@ -130,16 +130,12 @@ let
         layout:
         let
           layoutEnabled = isLayoutEnabled layout.value;
+          layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) layouts;
         in
         {
-          "enable${layout.label}" = isLayoutEnabled layout.value;
+          "enable${layout.label}" = layoutEnabled;
         }
-        // (
-          let
-            layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) layouts;
-          in
-          if isLayoutEnabled layout.value then lib.attrByPath [ "options" ] { } layoutObj // { } else { }
-        );
+        // (if layoutEnabled then lib.attrByPath [ "options" ] { } layoutObj // { } else { });
     in
     lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts);
 in
@@ -267,6 +263,16 @@ in
           preventProtrusion = settings.preventProtrusion;
           noTileBorders = settings.noTileBorders;
           floatUtility = settings.floatUtility;
+
+          # Filter rules
+          ignoreRole = settings.ignoreRoles;
+          ignoreTitle = settings.ignoreTitles;
+          ignoreClass = settings.ignoreClasses;
+          ignoreActivity = settings.ignoreActivities;
+          ignoreScreen = settings.ignoreScreens;
+          ignoreVDesktop = settings.ignoreVirtualDesktops;
+          floatingClass = settings.floatWindowsByClass;
+          floatingTitle = settings.floatWindowsByTitle;
         };
     };
   };
