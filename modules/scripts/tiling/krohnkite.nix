@@ -83,8 +83,8 @@ let
       };
 
       options = lib.mkOption {
-        type = with lib.types; attrsOf (with lib.types; anything);
-        default = { };
+        type = with lib.types; nullOr (attrsOf (with lib.types; anything));
+        default = null;
         example = {
           maximize = true;
         };
@@ -106,35 +106,39 @@ let
       description = description;
     };
 
-  findLayoutSetting =
-    name: key:
-    let
-      layout = lib.findFirst (
-        layout: layout.name == name
-      ) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
-    in
-    lib.getAttrFromPath [
-      "options"
-      key
-    ] layout
-    // null;
+  convertListToString = list: if list == null then null else builtins.concatStringsSep "," list;
+
+  mkFilterOption =
+    description: default: example:
+    lib.mkOption {
+      type = with lib.types; nullOr (listOf str);
+      default = default;
+      example = example;
+      description = description;
+      apply = convertListToString;
+    };
+
+  checkIfString = v: if lib.isString v then v else v.name;
 
   isLayoutEnabled =
-    name: lib.any (layout: layout.name == name) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
+    name: lib.any (l: (checkIfString l) == name) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
 
   serializeLayouts =
     layouts:
     let
       toLayoutEntry =
         layout:
+        let
+          layoutEnabled = isLayoutEnabled layout.value;
+        in
         {
           "enable${layout.label}" = isLayoutEnabled layout.value;
         }
         // (
-          if isLayoutEnabled layout.value then
-            lib.getAttrFromPath [ "options" ] (lib.findFirst (l: l.name == layout.value) layouts) // { }
-          else
-            { }
+          let
+            layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) layouts;
+          in
+          if isLayoutEnabled layout.value then lib.attrByPath [ "options" ] { } layoutObj // { } else { }
         );
     in
     lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts);
@@ -168,25 +172,66 @@ in
 
       layouts = {
         enabled = lib.mkOption {
-          type = with lib.types; listOf krohnkiteLayouts;
+          type =
+            with lib.types;
+            listOf (either (enum (lib.lists.forEach krohnkiteSupportedLayouts (x: x.value))) krohnkiteLayouts);
           default = [ ];
           example = [
+            "floating"
             {
               name = "monocle";
               options = {
                 maximize = true;
               };
             }
-            {
-              name = "column";
-              options = {
-                balanced = true;
-              };
-            }
           ];
-          description = "List of layout configurations for Krohnkite.";
+          description = ''
+            List of layout configurations for Krohnkite. This can be:
+            - An array of strings representing valid layout names, like `["floating" "monocle"]`. Valid values include:
+              ${lib.concatStringsSep ", " (lib.lists.forEach krohnkiteSupportedLayouts (x: x.value))}.
+            - An array of objects with layout-specific options:
+              ```
+              [
+                { name = "monocle"; options = { maximize = true; }; }
+                { name = "column"; options = { balanced = true; }; }
+              ]
+              ```
+            Mixed types are also supported.
+          '';
         };
       };
+
+      # Tiling options
+      maximizeSoleTile = mkNullableOption bool "Whether to maximize the sole window" true;
+      keepFloatAbove = mkNullableOption bool "Whether to keep floating windows above tiled windows" true;
+      keepTilingOnDrag =
+        mkNullableOption bool "Always preserve the tiling status of the window upon dragging"
+          true;
+      preventMinimize = mkNullableOption bool "Prevent windows from minimizing" true;
+      preventProtrusion = mkNullableOption bool "Prevent window from protruding from its screen" true;
+      noTileBorders = mkNullableOption bool "Remove borders of tiled windows" true;
+      floatUtility = mkNullableOption bool "Float utility windows" true;
+
+      # Filter rules
+      ignoreRoles = mkFilterOption "Ignore windows by role" [ "quake" ] [ "quake" ];
+      ignoreTitles = mkFilterOption "Ignore windows by title" null [ "firefox" ];
+      ignoreClasses = mkFilterOption "Ignore windows by class" [
+        "krunner"
+        "yakuake"
+        "spectacle"
+        "kded5"
+        "xwaylandvideobridge"
+        "plasmashell"
+        "ksplashqml"
+        "org.kde.plasmashell"
+        "org.kde.polkit-kde-authentication-agent-1"
+        "org.kde.kruler"
+      ] [ "dialog" ];
+      ignoreActivities = mkFilterOption "Disable tiling on activities" null [ "Activity1" ];
+      ignoreScreens = mkFilterOption "Disable tiling on screens" null [ "Screen1" ];
+      ignoreVirtualDesktops = mkFilterOption "Disable tiling on virtual desktops" null [ "Desktop_1" ];
+      floatWindowsByClass = mkFilterOption "Float windows by class" null [ "dialog" ];
+      floatWindowsByTitle = mkFilterOption "Float windows by title" null [ "firefox" ];
     };
   };
 
@@ -199,7 +244,9 @@ in
       Plugins.krohnkiteEnabled = cfg.kwin.scripts.krohnkite.enable;
       Script-krohnkite =
         let
-          gaps = cfg.kwin.scripts.krohnkite.settings.gaps;
+          settings = cfg.kwin.scripts.krohnkite.settings;
+          gaps = settings.gaps;
+          tileWidthLimit = settings.tileWidthLimit;
         in
         serializeLayouts cfg.kwin.scripts.krohnkite.settings.layouts.enabled
         // {
@@ -209,8 +256,17 @@ in
           screenGapBottom = gaps.bottom;
           tileLayoutGap = gaps.tiles;
 
-          limitTileWidth = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.enable;
-          limitTileWidthRatio = cfg.kwin.scripts.krohnkite.settings.tileWidthLimit.ratio;
+          limitTileWidth = tileWidthLimit.enable;
+          limitTileWidthRatio = tileWidthLimit.ratio;
+
+          # Tiling options
+          maximizeSoleTile = settings.maximizeSoleTile;
+          keepFloatAbove = settings.keepFloatAbove;
+          keepTilingOnDrag = settings.keepTilingOnDrag;
+          preventMinimize = settings.preventMinimize;
+          preventProtrusion = settings.preventProtrusion;
+          noTileBorders = settings.noTileBorders;
+          floatUtility = settings.floatUtility;
         };
     };
   };
