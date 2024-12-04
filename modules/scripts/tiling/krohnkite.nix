@@ -89,9 +89,10 @@ let
           maximize = true;
         };
         description = ''
-          Layout-specific options. For example:
-          - `monocle` can have `{ maximize = true; }`
-          - `column` can have `{ balanced = true; }`
+          Layout-specific options. Supported options depend on the layout:
+          - `column`: `{ balanced = true; }`
+          - `monocle`: `{ maximize = true; minimizeRest = true; }`
+          - `stair`: `{ reverse = true; }`
         '';
       };
     };
@@ -123,6 +124,36 @@ let
   isLayoutEnabled =
     name: lib.any (l: (checkIfString l) == name) cfg.kwin.scripts.krohnkite.settings.layouts.enabled;
 
+  generateOptionsConfig =
+    layoutObj:
+    if layoutObj.name == "monocle" then
+      {
+        monocleMaximize = lib.attrByPath [
+          "options"
+          "maximize"
+        ] false layoutObj;
+        monocleMinimizeRest = lib.attrByPath [
+          "options"
+          "minimizeRest"
+        ] false layoutObj;
+      }
+    else if layoutObj.name == "column" then
+      {
+        columnsBalanced = lib.attrByPath [
+          "options"
+          "balanced"
+        ] false layoutObj;
+      }
+    else if layoutObj.name == "stair" then
+      {
+        stairReverse = lib.attrByPath [
+          "options"
+          "reverse"
+        ] false layoutObj;
+      }
+    else
+      { };
+
   serializeLayouts =
     layouts:
     let
@@ -130,12 +161,12 @@ let
         layout:
         let
           layoutEnabled = isLayoutEnabled layout.value;
-          layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) layouts;
+          layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) { } layouts;
         in
         {
           "enable${layout.label}" = layoutEnabled;
         }
-        // (if layoutEnabled then lib.attrByPath [ "options" ] { } layoutObj // { } else { });
+        // (if layoutEnabled && !lib.isString layoutObj then generateOptionsConfig layoutObj else { });
     in
     lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts);
 in
