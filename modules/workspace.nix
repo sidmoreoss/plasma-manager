@@ -448,17 +448,40 @@ in
 
         desktopScript."wallpaper_picture" = (
           lib.mkIf (cfg.workspace.wallpaper != null) {
-            # We just put this here as we need this script to be a desktop-script in
-            # order to link it together with the other desktop-script (namely
-            # panels). Adding a comment with the wallpaper makes it so that when the
-            # wallpaper changes, the sha256sum also changes for the js file, which
-            # gives us the correct behavior with last_run files.
-            text = "// Wallpaper to set later: ${cfg.workspace.wallpaper}";
-            postCommands = ''
-              plasma-apply-wallpaperimage ${cfg.workspace.wallpaper} ${
-                lib.optionalString (
-                  cfg.workspace.wallpaperFillMode != null
-                ) "--fill-mode ${cfg.workspace.wallpaperFillMode}"
+            text = ''
+              let allDesktops = desktops();
+              for (const desktop of allDesktops) {
+                  desktop.wallpaperPlugin = "org.kde.image";
+                  desktop.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+                  desktop.writeConfig("Image", "file://${toString cfg.workspace.wallpaper}");
+                  ${
+                    lib.optionalString (cfg.workspace.wallpaperFillMode != null)
+                      ''desktop.writeConfig("FillMode", "${
+                        toString wallpaperFillModeTypes.${cfg.workspace.wallpaperFillMode}
+                      }");''
+                  }
+                  ${
+                    lib.optionalString (cfg.workspace.wallpaperBackground != null)
+                      ''desktop.writeConfig("${
+                        if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
+                          "Blur"
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
+                          "Color"
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
+                      }", "${
+                        if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
+                          lib.boolToString cfg.workspace.wallpaperBackground.blur
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
+                          cfg.workspace.wallpaperBackground.color
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
+                      }");''
+                  }
               }
             '';
             priority = 3;
@@ -484,18 +507,25 @@ in
                       }");''
                   }
                   ${
-                    lib.optionalString
-                      (cfg.workspace.wallpaperBackground != null || cfg.workspace.wallpaperBackground != { })
+                    lib.optionalString (cfg.workspace.wallpaperBackground != null)
                       ''desktop.writeConfig("${
                         if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
                           "Blur"
-                        else
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
                           "Color"
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
                       }", "${
                         if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
                           lib.boolToString cfg.workspace.wallpaperBackground.blur
-                        else
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
                           cfg.workspace.wallpaperBackground.color
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
                       }");''
                   }
               }
@@ -544,18 +574,25 @@ in
                       }");''
                   }
                   ${
-                    lib.optionalString
-                      (cfg.workspace.wallpaperBackground != null || cfg.workspace.wallpaperBackground != { })
+                    lib.optionalString (cfg.workspace.wallpaperBackground != null)
                       ''desktop.writeConfig("${
                         if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
                           "Blur"
-                        else
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
                           "Color"
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
                       }", "${
                         if cfg.workspace.wallpaperBackground ? blur && cfg.workspace.wallpaperBackground.blur != null then
                           lib.boolToString cfg.workspace.wallpaperBackground.blur
-                        else
+                        else if
+                          cfg.workspace.wallpaperBackground ? color && cfg.workspace.wallpaperBackground.color != null
+                        then
                           cfg.workspace.wallpaperBackground.color
+                        else
+                          throw "plasma-manager: wallpaperBackground is not null and has no option set"
                       }");''
                   }
               }
