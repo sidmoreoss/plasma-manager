@@ -46,6 +46,7 @@ let
         example = "eng";
         description = ''
           Keyboard layout variant.
+          Examples: "mac", "dvorak", "workman-intl", and "colemak_dh_wide_iso"
         '';
         apply = builtins.toString;
       };
@@ -178,6 +179,15 @@ let
         '';
         apply = method: if (method == null) then null else scrollMethods."${method}";
       };
+      scrollSpeed = lib.mkOption {
+        type = with lib.types; nullOr (numbers.between 0.1 20);
+        default = null;
+        example = 0.1;
+        description = ''
+          Configure the scrolling speed of the touchpad. Lower is slower.
+          If unset, KDE Plasma will default to 0.3.
+        '';
+      };
       rightClickMethod = lib.mkOption {
         type = with lib.types; nullOr (enum (builtins.attrNames rightClickMethods));
         default = null;
@@ -222,6 +232,7 @@ let
         TapAndDrag = touchpad.tapAndDrag;
         TapDragLock = touchpad.tapDragLock;
         ScrollMethod = touchpad.scrollMethod;
+        ScrollFactor = touchpad.scrollSpeed;
         ClickMethod = touchpad.rightClickMethod;
         LmrTapButtonMap = touchpad.twoFingerTap;
       };
