@@ -107,13 +107,15 @@ let
       description = description;
     };
 
+  filterDefined = attrs: lib.filterAttrs (_: v: v != null) attrs;
+
   convertListToString = list: if list == null then null else builtins.concatStringsSep "," list;
 
   mkFilterOption =
-    description: default: example:
+    description: example:
     lib.mkOption {
       type = with lib.types; nullOr (listOf str);
-      default = default;
+      default = null;
       example = example;
       description = description;
       apply = convertListToString;
@@ -163,12 +165,15 @@ let
           layoutEnabled = isLayoutEnabled layout.value;
           layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) { } layouts;
         in
-        {
+        filterDefined {
           "enable${layout.label}" = layoutEnabled;
         }
         // (if layoutEnabled && !lib.isString layoutObj then generateOptionsConfig layoutObj else { });
     in
-    lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts);
+    if layouts != null then
+      lib.foldl' lib.recursiveUpdate { } (lib.map toLayoutEntry krohnkiteSupportedLayouts)
+    else
+      { };
 in
 {
   options.programs.plasma.kwin.scripts.krohnkite = with lib.types; {
@@ -201,8 +206,10 @@ in
         enabled = lib.mkOption {
           type =
             with lib.types;
-            listOf (either (enum (lib.lists.forEach krohnkiteSupportedLayouts (x: x.value))) krohnkiteLayouts);
-          default = [ ];
+            nullOr (
+              listOf (either (enum (lib.lists.forEach krohnkiteSupportedLayouts (x: x.value))) krohnkiteLayouts)
+            );
+          default = null;
           example = [
             "floating"
             {
@@ -240,8 +247,8 @@ in
       floatUtility = mkNullableOption bool "Float utility windows" true;
 
       # Filter rules
-      ignoreRoles = mkFilterOption "Ignore windows by role" [ "quake" ] [ "quake" ];
-      ignoreTitles = mkFilterOption "Ignore windows by title" null [ "firefox" ];
+      ignoreRoles = mkFilterOption "Ignore windows by role" [ "quake" ];
+      ignoreTitles = mkFilterOption "Ignore windows by title" [ "firefox" ];
       ignoreClasses = mkFilterOption "Ignore windows by class" [
         "krunner"
         "yakuake"
@@ -253,12 +260,12 @@ in
         "org.kde.plasmashell"
         "org.kde.polkit-kde-authentication-agent-1"
         "org.kde.kruler"
-      ] [ "dialog" ];
-      ignoreActivities = mkFilterOption "Disable tiling on activities" null [ "Activity1" ];
-      ignoreScreens = mkFilterOption "Disable tiling on screens" null [ "Screen1" ];
-      ignoreVirtualDesktops = mkFilterOption "Disable tiling on virtual desktops" null [ "Desktop_1" ];
-      floatWindowsByClass = mkFilterOption "Float windows by class" null [ "dialog" ];
-      floatWindowsByTitle = mkFilterOption "Float windows by title" null [ "firefox" ];
+      ];
+      ignoreActivities = mkFilterOption "Disable tiling on activities" [ "Activity1" ];
+      ignoreScreens = mkFilterOption "Disable tiling on screens" [ "Screen1" ];
+      ignoreVirtualDesktops = mkFilterOption "Disable tiling on virtual desktops" [ "Desktop_1" ];
+      floatWindowsByClass = mkFilterOption "Float windows by class" [ "dialog" ];
+      floatWindowsByTitle = mkFilterOption "Float windows by title" [ "firefox" ];
     };
   };
 
@@ -275,7 +282,7 @@ in
           gaps = settings.gaps;
           tileWidthLimit = settings.tileWidthLimit;
         in
-        serializeLayouts cfg.kwin.scripts.krohnkite.settings.layouts.enabled
+        filterDefined (serializeLayouts (settings.layouts.enabled))
         // {
           screenGapTop = gaps.top;
           screenGapLeft = gaps.left;
