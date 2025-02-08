@@ -20,6 +20,7 @@ let
     "luisbocanegra.panel.colorizer" = [ plasma-panel-colorizer ];
     "org.kde.windowbuttons" = [ kdePackages.applet-window-buttons6 ];
     "org.dhruv8sh.kara" = [ kara ];
+    "luisbocanegra.panelspacer.extended" = [ plasma-panel-spacer-extended ];
   };
   # An attrset of service-names and widgets/conditions. If any of the
   # conditions (given in cond) evaluate to true for any of the widgets with the
@@ -138,7 +139,7 @@ let
             Plasma 6-only.
           '';
         };
-        floating = lib.mkEnableOption "Enable or disable floating style.";
+        floating = lib.mkEnableOption "floating style.";
         widgets = lib.mkOption {
           type = lib.types.listOf widgets.type;
           default = [
