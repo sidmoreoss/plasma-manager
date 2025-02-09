@@ -107,8 +107,6 @@ let
       description = description;
     };
 
-  filterDefined = attrs: lib.filterAttrs (_: v: v != null) attrs;
-
   convertListToString = list: if list == null then null else builtins.concatStringsSep "," list;
 
   mkFilterOption =
@@ -165,7 +163,7 @@ let
           layoutEnabled = isLayoutEnabled layout.value;
           layoutObj = lib.findFirst (l: (checkIfString l) == layout.value) { } layouts;
         in
-        filterDefined {
+        {
           "enable${layout.label}" = layoutEnabled;
         }
         // (if layoutEnabled && !lib.isString layoutObj then generateOptionsConfig layoutObj else { });
@@ -282,7 +280,7 @@ in
           gaps = settings.gaps;
           tileWidthLimit = settings.tileWidthLimit;
         in
-        filterDefined (serializeLayouts (settings.layouts.enabled))
+        serializeLayouts (settings.layouts.enabled)
         // {
           screenGapTop = gaps.top;
           screenGapLeft = gaps.left;
